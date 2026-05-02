@@ -1,0 +1,46 @@
+{
+    "status": "online",
+    "free_limit": 10,
+    "premium_limit": 40,
+    "temperature": 0.2,
+    "cooldown_seconds": 2,
+    "max_input_length": 1000,
+    "model_name": "gemini-3-flash-preview",
+    "api_retry_attempts": 3,
+    "api_retry_base_delay": 4,
+    "system_prompt": "",
+    "welcome_message": "",
+    "maintenance_message": "",
+    "support_contact": "admin",
+    "upgrade_pricing": {
+        "monthly": {
+            "label": "Monthly",
+            "days": 30,
+            "price": 2.99
+        },
+        "6month": {
+            "label": "6 Months",
+            "days": 180,
+            "price": 15.0
+        },
+        "yearly": {
+            "label": "Yearly",
+            "days": 365,
+            "price": 30.0
+        }
+    },
+    "features": {
+        "free": {
+            "image_analysis": false,
+            "step_by_step": true,
+            "pdf_reading": false,
+            "generate_quizzes": false
+        },
+        "premium": {
+            "image_analysis": true,
+            "step_by_step": true,
+            "pdf_reading": true,
+            "generate_quizzes": true
+        }
+    }
+}
