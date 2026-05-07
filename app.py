@@ -281,29 +281,10 @@ def improve_math_font(text):
 def enforce_dataset_symbols(answer_text: str, retrieved_context: str, user_query: str = "") -> str:
     """
     Enforce dataset symbol fidelity on the final answer.
-    If retrieved curriculum context clearly defines voltage as V, rewrite common
-    voltage-as-U patterns (U, U_s, etc.) to V to match the Khmer curriculum dataset.
+    Always rewrite voltage-as-U patterns (U, U_PN, U_s, etc.) to V to match
+    the Khmer curriculum dataset which exclusively uses V for voltage (តង់ស្យុង).
     """
     ans = answer_text or ""
-    ctx = retrieved_context or ""
-    ctx_low = ctx.lower()
-
-    uq_low = (user_query or "").lower()
-
-    # Evidence that the dataset excerpt uses V for voltage OR the user is clearly
-    # asking an electricity/voltage/Ohm-law question where the curriculum uses V.
-    voltage_is_v = (
-        ("តង់ស្យុង" in ctx and "(v)" in ctx_low)
-        or ("- v =" in ctx_low)
-        or ("v តង់ស្យុង" in ctx_low)
-        or ("v = r × i" in ctx_low)
-        or ("i = v / r" in ctx_low)
-        or ("r = v / i" in ctx_low)
-        or ("v = w / q" in ctx_low)
-        or any(k in uq_low for k in ["តង់ស្យុង", "វ៉ុល", "voltage", "អូម", "ohm", "ច្បាប់អូម", "សៀគ្វី", "voltmeter", "អំពែ", "amper"])
-    )
-    if not voltage_is_v:
-        return ans
 
     def _swap_u_to_v_line(line: str) -> str:
         # Only adjust lines that look like math/formulas to avoid touching Khmer words.
@@ -311,11 +292,12 @@ def enforce_dataset_symbols(answer_text: str, retrieved_context: str, user_query
             return line
         # Common voltage notations the model tends to output (be permissive; math-lines only)
         line = line.replace("U_total", "V_total").replace("Utotal", "Vtotal")
+        line = line.replace("U_PN", "V_PN").replace("U_pn", "V_pn")
         line = line.replace("U_s", "V_s").replace("Uₛ", "Vₛ")
         line = line.replace("U0", "V0").replace("U₀", "V₀")
+        line = line.replace("U_motor", "V_motor").replace("U_moto", "V_moto")
 
         # Replace U with unicode subscripts: U₁, U₂, ... and also U followed by subscript letters
-        # (Telegram/Unicode can render "U_total" as Uₜₒₜₐₗ).
         subscript_chars = "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓ"
         line = re.sub(rf"U(?=[{re.escape(subscript_chars)}])", "V", line)
 
@@ -477,8 +459,9 @@ def get_chat_session(user_id, plan_type, settings, extra_knowledge: str = ""):
         "1. Ground every explanation in the curriculum material and retrieved excerpts above. If something is not covered there, say so briefly and still give a correct physics answer consistent with the course level.\n"
         "2. 📚 SYMBOL FIDELITY RULE (VERY STRICT):\n"
         "   - For each topic, use variable letters/symbols exactly as written in dataset formulas/definitions.\n"
-        "   - DO NOT rename symbols (example: if dataset says voltage is U, do not switch to V unless dataset uses V).\n"
-        "   - Before calculating, include a short mapping line for symbols from dataset (e.g., U = ..., I = ..., R = ...).\n"
+        "   - VOLTAGE SYMBOL: ALWAYS use V (not U) for voltage/តង់ស្យុង throughout ALL answers, formulas, and calculations. This is the standard symbol used in the Khmer physics curriculum.\n"
+        "   - Terminal voltage of a battery/generator uses V_PN (not U_PN): V_PN = E - r × I\n"
+        "   - Before calculating, include a short mapping line for symbols from dataset (e.g., V = ..., I = ..., R = ...).\n"
         "   - If two notations exist, prefer the notation shown in the retrieved excerpt for this question.\n"
         "3. 📐 MATHEMATICS FORMATTING RULE:\n"
         "   - DO NOT use $ dollar signs anywhere in your response\n"
