@@ -20,8 +20,9 @@ from history_retention import filter_retention
 # 🚀 Import our hybrid SQLite user manager
 import user_db
 
-# Load Environment Variables
-load_dotenv()
+# Load Environment Variables from this package folder
+dotenv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+load_dotenv(dotenv_path)
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 
 # Stable dev default so the Flask debug reloader (and file saves) do not log you out every time.

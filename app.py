@@ -24,7 +24,8 @@ from history_retention import filter_retention, run_history_retention_once
 from dataset_rag import retrieve_relevant_context, try_auto_learn_from_chat
 
 # --- Configuration ---
-load_dotenv()
+dotenv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+load_dotenv(dotenv_path)
 
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
