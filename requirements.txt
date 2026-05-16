@@ -130,7 +130,6 @@ jupyterlab_pygments==0.3.0
 jupyterlab_server==2.28.0
 jupyterlab_widgets==3.0.16
 # Editable install with no version control (khmer-ocr==0.2.0)
--e c:\users\user\downloads\compressed\khmerocr-main\khmerocr-main
 kiwisolver==1.4.9
 langchain==1.1.0
 langchain-classic==1.0.0
