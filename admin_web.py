@@ -1719,7 +1719,6 @@ def upgrade_reports():
     </div>
 
     <div class="card p-4 shadow-sm border-0 rounded-4">
-        {empty_message}
         <div class="table-responsive">
             <table id="upgradeReportsTable" class="table table-hover align-middle mb-0">
                 <thead class="bg-light">

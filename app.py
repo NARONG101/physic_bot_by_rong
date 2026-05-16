@@ -9,8 +9,15 @@ import uuid
 import html
 from collections import deque
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:
+    import importlib
+    genai = importlib.import_module("google.genai")
+    types = importlib.import_module("google.genai.types")
+
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ConversationHandler, filters, ContextTypes
 import PIL.Image
