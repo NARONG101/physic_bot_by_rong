@@ -2428,5 +2428,5 @@ def broadcast():
 
 if __name__ == '__main__':
     _port = int(os.getenv('PORT', '5000'))
-    _host = os.getenv('FLASK_HOST', '127.0.0.1')
+    _host = os.getenv('FLASK_HOST', '0.0.0.0')
     app.run(debug=_FLASK_DEBUG, host=_host, port=_port)
