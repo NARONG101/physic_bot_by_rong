@@ -1675,14 +1675,8 @@ def upgrade_reports():
         </tr>
         """
 
-    empty_message = ""
     if not rows:
-        rows = ""
-        empty_message = """
-        <div class='alert alert-warning py-3 mb-4 rounded-4'>
-            No upgrade records found for this query.
-        </div>
-        """
+        rows = "<tr><td colspan='6' class='text-center text-muted py-4'>No upgrade records found.</td></tr>"
 
     content = f"""
     <div class="d-flex justify-content-between align-items-center mb-4">
