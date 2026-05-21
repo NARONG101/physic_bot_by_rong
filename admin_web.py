@@ -1018,7 +1018,8 @@ BASE_HTML = """
         }
 
         function confirmUpdate(event, formElement, titleText, confirmText, isDanger) {
-            event.preventDefault(); 
+            if (event && event.preventDefault) event.preventDefault();
+            if (!formElement) return;
             Swal.fire({
                 title: 'Are you sure?',
                 text: titleText,
@@ -1033,6 +1034,35 @@ BASE_HTML = """
                     formElement.submit();
                 }
             });
+        }
+
+        function pickUpgrade(event, uid, planKey, confirmText) {
+            if (event && event.preventDefault) event.preventDefault();
+            const form = document.getElementById('upgrade-form-' + uid);
+            if (!form) return;
+            const keyInput = form.querySelector('input[name="plan_key"]');
+            if (keyInput) keyInput.value = planKey;
+            confirmUpdate(event, form, confirmText, 'Yes, Upgrade', false);
+        }
+
+        function submitManualPlan(event, form) {
+            if (event && event.preventDefault) event.preventDefault();
+            const uid = (form.querySelector('input[name="user_id"]') || {}).value || '';
+            if (!uid.trim()) {
+                Swal.fire('Missing User ID', 'Paste a Telegram user ID first.', 'warning');
+                return false;
+            }
+            const action = (form.querySelector('select[name="plan_action"]') || {}).value || '';
+            const labels = {
+                upgrade_monthly: 'Monthly Premium upgrade',
+                upgrade_6month: '6-Month Premium upgrade',
+                upgrade_yearly: 'Yearly Premium upgrade',
+                downgrade: 'downgrade to Free Plan'
+            };
+            const label = labels[action] || 'plan change';
+            const isDanger = action === 'downgrade';
+            confirmUpdate(event, form, 'Apply ' + label + ' for user ' + uid.trim() + '?', 'Yes, Apply', isDanger);
+            return false;
         }
 
         // Global submit feedback for better UX responsiveness
@@ -1656,53 +1686,42 @@ def users_list():
             
         status_badge = "<span class='badge bg-danger rounded-pill px-3 py-2 shadow-sm'><i class='fa-solid fa-ban me-1'></i> Banned</span>" if is_banned else "<span class='badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2'><i class='fa-solid fa-check-circle me-1'></i> Active</span>"
         
+        username_val = html.escape(str(data.get('username') or 'Unknown'), quote=True)
+        uid_val = html.escape(str(uid), quote=True)
+        confirm_revoke = json.dumps(f"Revoke Premium for @{data.get('username', 'Unknown')}?")
+
         if is_premium:
             plan_action = f"""
                 <form action="/update_plan" method="POST" class="m-0 mb-2">
-                    <input type="hidden" name="user_id" value="{uid}">
-                    <input type="hidden" name="username" value="{data['username']}">
+                    <input type="hidden" name="user_id" value="{uid_val}">
+                    <input type="hidden" name="username" value="{username_val}">
                     <input type="hidden" name="new_plan" value="Free Plan">
-                    <button type="button" class="btn btn-outline-warning btn-sm fw-bold w-100" onclick="confirmUpdate(event, this.form, 'Downgrade @{data['username']} to Free Plan?', 'Yes, Revoke', true)">
+                    <button type="button" class="btn btn-outline-warning btn-sm fw-bold w-100" onclick="confirmUpdate(event, this.form, {confirm_revoke}, 'Yes, Revoke', true)">
                         <i class="fa-solid fa-arrow-down me-1"></i> Revoke
                     </button>
                 </form>
             """
         else:
+            confirm_monthly = json.dumps(f"Upgrade to Monthly Premium (${pricing['monthly']['price']:.2f})?")
+            confirm_6month = json.dumps(f"Upgrade to 6-Month Premium (${pricing['6month']['price']:.2f})?")
+            confirm_yearly = json.dumps(f"Upgrade to Yearly Premium (${pricing['yearly']['price']:.2f})?")
             plan_action = f"""
-                <div class="btn-group w-100 mb-2">
-                    <button type="button" class="btn btn-success btn-sm fw-bold w-100 shadow-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fa-solid fa-arrow-up me-1"></i> Upgrade
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                        <li>
-                            <form action="/update_plan" method="POST" class="m-0">
-                                <input type="hidden" name="user_id" value="{uid}">
-                                <input type="hidden" name="username" value="{data['username']}">
-                                <input type="hidden" name="new_plan" value="Premium">
-                                <input type="hidden" name="plan_key" value="monthly">
-                                <button type="button" class="dropdown-item" onclick="confirmUpdate(event, this.form, 'Upgrade @{data['username']} to Monthly Premium (${pricing['monthly']['price']:.2f})?', 'Yes, Upgrade', false)">Monthly - ${pricing['monthly']['price']:.2f}</button>
-                            </form>
-                        </li>
-                        <li>
-                            <form action="/update_plan" method="POST" class="m-0">
-                                <input type="hidden" name="user_id" value="{uid}">
-                                <input type="hidden" name="username" value="{data['username']}">
-                                <input type="hidden" name="new_plan" value="Premium">
-                                <input type="hidden" name="plan_key" value="6month">
-                                <button type="button" class="dropdown-item" onclick="confirmUpdate(event, this.form, 'Upgrade @{data['username']} to 6-Month Premium (${pricing['6month']['price']:.2f})?', 'Yes, Upgrade', false)">6 Months - ${pricing['6month']['price']:.2f}</button>
-                            </form>
-                        </li>
-                        <li>
-                            <form action="/update_plan" method="POST" class="m-0">
-                                <input type="hidden" name="user_id" value="{uid}">
-                                <input type="hidden" name="username" value="{data['username']}">
-                                <input type="hidden" name="new_plan" value="Premium">
-                                <input type="hidden" name="plan_key" value="yearly">
-                                <button type="button" class="dropdown-item" onclick="confirmUpdate(event, this.form, 'Upgrade @{data['username']} to Yearly Premium (${pricing['yearly']['price']:.2f})?', 'Yes, Upgrade', false)">Yearly - ${pricing['yearly']['price']:.2f}</button>
-                            </form>
-                        </li>
-                    </ul>
-                </div>
+                <form id="upgrade-form-{uid_val}" action="/update_plan" method="POST" class="m-0 mb-2">
+                    <input type="hidden" name="user_id" value="{uid_val}">
+                    <input type="hidden" name="username" value="{username_val}">
+                    <input type="hidden" name="new_plan" value="Premium">
+                    <input type="hidden" name="plan_key" value="monthly">
+                    <div class="dropdown w-100">
+                        <button type="button" class="btn btn-success btn-sm fw-bold w-100 shadow-sm dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false">
+                            <i class="fa-solid fa-arrow-up me-1"></i> Upgrade
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li><button type="button" class="dropdown-item" onclick="pickUpgrade(event, '{uid_val}', 'monthly', {confirm_monthly})">Monthly - ${pricing['monthly']['price']:.2f}</button></li>
+                            <li><button type="button" class="dropdown-item" onclick="pickUpgrade(event, '{uid_val}', '6month', {confirm_6month})">6 Months - ${pricing['6month']['price']:.2f}</button></li>
+                            <li><button type="button" class="dropdown-item" onclick="pickUpgrade(event, '{uid_val}', 'yearly', {confirm_yearly})">Yearly - ${pricing['yearly']['price']:.2f}</button></li>
+                        </ul>
+                    </div>
+                </form>
             """
 
         if is_banned:
@@ -1799,7 +1818,7 @@ def users_list():
     
     <div class="card p-4 shadow-sm border-0 mb-4 bg-white rounded-4">
         <h5 class="fw-bold mb-3 text-dark"><i class="fa-solid fa-bolt text-warning me-2"></i> Quick Manual Override</h5>
-        <form action="/update_plan" method="POST" class="row g-3 align-items-center">
+        <form action="/update_plan" method="POST" class="row g-3 align-items-center" onsubmit="return submitManualPlan(event, this);">
             <div class="col-md-5">
                 <input type="text" name="user_id" class="form-control bg-light border-0 py-2" placeholder="Paste Telegram ID here..." required>
                 <input type="hidden" name="username" value="Manual_Upgrade">
@@ -1836,14 +1855,30 @@ def users_list():
         </div>
     </div>
     """
-    return render_template_string(BASE_HTML, page_content=content, extra_scripts="<script>$(document).ready(function(){ $('#usersTable').DataTable({'order': [[ 4, 'desc' ]], scrollX: true, autoWidth: false}); });</script>")
+    users_scripts = """
+    <script>
+        $(document).ready(function() {
+            $('#usersTable').DataTable({
+                order: [[4, 'desc']],
+                scrollX: true,
+                autoWidth: false,
+                columnDefs: [{ orderable: false, targets: 5 }]
+            });
+        });
+    </script>
+    """
+    return render_template_string(BASE_HTML, page_content=content, extra_scripts=users_scripts)
 
 @app.route('/update_plan', methods=['POST'])
 @login_required
 def update_plan():
-    uid = request.form.get('user_id').strip()
-    plan = request.form.get('new_plan')
-    username = request.form.get('username', 'Unknown')
+    uid = (request.form.get('user_id') or '').strip()
+    if not uid:
+        flash('User ID is required.', 'danger')
+        return redirect(url_for('users_list'))
+
+    plan = (request.form.get('new_plan') or '').strip()
+    username = (request.form.get('username') or 'Unknown').strip()
 
     plan_action = request.form.get('plan_action', '').strip()
     plan_key = request.form.get('plan_key', '').strip()
