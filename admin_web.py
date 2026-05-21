@@ -99,6 +99,11 @@ UPGRADE_OPTIONS = {
 }
 
 
+def _html_attr(value) -> str:
+    """Escape text for safe embedding in HTML double-quoted attributes."""
+    return html.escape(str(value), quote=True)
+
+
 def _get_upgrade_pricing(settings: dict) -> dict:
     """Return validated upgrade pricing config from settings with safe defaults."""
     raw = settings.get("upgrade_pricing") if isinstance(settings, dict) else None
@@ -1686,39 +1691,48 @@ def users_list():
             
         status_badge = "<span class='badge bg-danger rounded-pill px-3 py-2 shadow-sm'><i class='fa-solid fa-ban me-1'></i> Banned</span>" if is_banned else "<span class='badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2'><i class='fa-solid fa-check-circle me-1'></i> Active</span>"
         
-        username_val = html.escape(str(data.get('username') or 'Unknown'), quote=True)
-        uid_val = html.escape(str(uid), quote=True)
-        confirm_revoke = json.dumps(f"Revoke Premium for @{data.get('username', 'Unknown')}?")
+        username_raw = str(data.get('username') or 'Unknown')
+        username_display = _html_attr(username_raw)
+        username_val = _html_attr(username_raw)
+        uid_val = _html_attr(uid)
+        confirm_revoke = _html_attr(f"Revoke Premium for @{username_raw}?")
+        confirm_monthly = _html_attr(f"Upgrade to Monthly Premium (${pricing['monthly']['price']:.2f})?")
+        confirm_6month = _html_attr(f"Upgrade to 6-Month Premium (${pricing['6month']['price']:.2f})?")
+        confirm_yearly = _html_attr(f"Upgrade to Yearly Premium (${pricing['yearly']['price']:.2f})?")
+        confirm_unban = _html_attr(f"Unban @{username_raw}?")
+        confirm_ban = _html_attr(f"Ban @{username_raw} from using the bot?")
 
         if is_premium:
             plan_action = f"""
-                <form action="/update_plan" method="POST" class="m-0 mb-2">
+                <form action="/update_plan" method="POST" class="m-0 mb-2 user-plan-form">
                     <input type="hidden" name="user_id" value="{uid_val}">
                     <input type="hidden" name="username" value="{username_val}">
                     <input type="hidden" name="new_plan" value="Free Plan">
-                    <button type="button" class="btn btn-outline-warning btn-sm fw-bold w-100" onclick="confirmUpdate(event, this.form, {confirm_revoke}, 'Yes, Revoke', true)">
+                    <button type="button" class="btn btn-outline-warning btn-sm fw-bold w-100 js-confirm-form"
+                        data-confirm-msg="{confirm_revoke}" data-confirm-btn="Yes, Revoke" data-is-danger="1">
                         <i class="fa-solid fa-arrow-down me-1"></i> Revoke
                     </button>
                 </form>
             """
         else:
-            confirm_monthly = json.dumps(f"Upgrade to Monthly Premium (${pricing['monthly']['price']:.2f})?")
-            confirm_6month = json.dumps(f"Upgrade to 6-Month Premium (${pricing['6month']['price']:.2f})?")
-            confirm_yearly = json.dumps(f"Upgrade to Yearly Premium (${pricing['yearly']['price']:.2f})?")
             plan_action = f"""
-                <form id="upgrade-form-{uid_val}" action="/update_plan" method="POST" class="m-0 mb-2">
+                <form action="/update_plan" method="POST" class="m-0 mb-2 user-plan-form user-upgrade-form">
                     <input type="hidden" name="user_id" value="{uid_val}">
                     <input type="hidden" name="username" value="{username_val}">
                     <input type="hidden" name="new_plan" value="Premium">
                     <input type="hidden" name="plan_key" value="monthly">
                     <div class="dropdown w-100">
-                        <button type="button" class="btn btn-success btn-sm fw-bold w-100 shadow-sm dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false">
+                        <button type="button" class="btn btn-success btn-sm fw-bold w-100 shadow-sm dropdown-toggle"
+                            data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false">
                             <i class="fa-solid fa-arrow-up me-1"></i> Upgrade
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                            <li><button type="button" class="dropdown-item" onclick="pickUpgrade(event, '{uid_val}', 'monthly', {confirm_monthly})">Monthly - ${pricing['monthly']['price']:.2f}</button></li>
-                            <li><button type="button" class="dropdown-item" onclick="pickUpgrade(event, '{uid_val}', '6month', {confirm_6month})">6 Months - ${pricing['6month']['price']:.2f}</button></li>
-                            <li><button type="button" class="dropdown-item" onclick="pickUpgrade(event, '{uid_val}', 'yearly', {confirm_yearly})">Yearly - ${pricing['yearly']['price']:.2f}</button></li>
+                            <li><button type="button" class="dropdown-item js-pick-upgrade"
+                                data-plan-key="monthly" data-confirm-msg="{confirm_monthly}">Monthly - ${pricing['monthly']['price']:.2f}</button></li>
+                            <li><button type="button" class="dropdown-item js-pick-upgrade"
+                                data-plan-key="6month" data-confirm-msg="{confirm_6month}">6 Months - ${pricing['6month']['price']:.2f}</button></li>
+                            <li><button type="button" class="dropdown-item js-pick-upgrade"
+                                data-plan-key="yearly" data-confirm-msg="{confirm_yearly}">Yearly - ${pricing['yearly']['price']:.2f}</button></li>
                         </ul>
                     </div>
                 </form>
@@ -1726,18 +1740,20 @@ def users_list():
 
         if is_banned:
             ban_action = f"""
-                <form action="/toggle_ban" method="POST" class="m-0">
-                    <input type="hidden" name="user_id" value="{uid}">
-                    <button type="button" class="btn btn-outline-secondary btn-sm fw-bold w-100" onclick="confirmUpdate(event, this.form, 'Unban @{data['username']}?', 'Yes, Unban', false)">
+                <form action="/toggle_ban" method="POST" class="m-0 user-ban-form">
+                    <input type="hidden" name="user_id" value="{uid_val}">
+                    <button type="button" class="btn btn-outline-secondary btn-sm fw-bold w-100 js-confirm-form"
+                        data-confirm-msg="{confirm_unban}" data-confirm-btn="Yes, Unban" data-is-danger="0">
                         <i class="fa-solid fa-unlock me-1"></i> Unban
                     </button>
                 </form>
             """
         else:
             ban_action = f"""
-                <form action="/toggle_ban" method="POST" class="m-0">
-                    <input type="hidden" name="user_id" value="{uid}">
-                    <button type="button" class="btn btn-outline-danger btn-sm fw-bold w-100" onclick="confirmUpdate(event, this.form, 'Ban @{data['username']} from using the bot?', 'Yes, Ban User', true)">
+                <form action="/toggle_ban" method="POST" class="m-0 user-ban-form">
+                    <input type="hidden" name="user_id" value="{uid_val}">
+                    <button type="button" class="btn btn-outline-danger btn-sm fw-bold w-100 js-confirm-form"
+                        data-confirm-msg="{confirm_ban}" data-confirm-btn="Yes, Ban User" data-is-danger="1">
                         <i class="fa-solid fa-ban me-1"></i> Ban
                     </button>
                 </form>
@@ -1751,8 +1767,8 @@ def users_list():
                         {avatar_letter}
                     </div>
                     <div>
-                        <div class="fw-bold text-dark fs-6">@{data['username']}</div>
-                        <div class="text-muted font-monospace small mt-1" style="font-size: 0.8rem;">ID: {uid}</div>
+                        <div class="fw-bold text-dark fs-6">@{username_display}</div>
+                        <div class="text-muted font-monospace small mt-1" style="font-size: 0.8rem;">ID: {uid_val}</div>
                     </div>
                 </div>
             </td>
@@ -1818,7 +1834,7 @@ def users_list():
     
     <div class="card p-4 shadow-sm border-0 mb-4 bg-white rounded-4">
         <h5 class="fw-bold mb-3 text-dark"><i class="fa-solid fa-bolt text-warning me-2"></i> Quick Manual Override</h5>
-        <form action="/update_plan" method="POST" class="row g-3 align-items-center" onsubmit="return submitManualPlan(event, this);">
+        <form id="manualPlanForm" action="/update_plan" method="POST" class="row g-3 align-items-center">
             <div class="col-md-5">
                 <input type="text" name="user_id" class="form-control bg-light border-0 py-2" placeholder="Paste Telegram ID here..." required>
                 <input type="hidden" name="username" value="Manual_Upgrade">
@@ -1832,7 +1848,7 @@ def users_list():
                 </select>
             </div>
             <div class="col-md-3">
-                <button type="submit" class="btn btn-dark w-100 fw-bold shadow-sm py-2">Apply Change</button>
+                <button type="button" id="manualPlanApplyBtn" class="btn btn-dark w-100 fw-bold shadow-sm py-2">Apply Change</button>
             </div>
         </form>
     </div>
@@ -1858,11 +1874,52 @@ def users_list():
     users_scripts = """
     <script>
         $(document).ready(function() {
+            function initUserDropdowns() {
+                if (!window.bootstrap) return;
+                document.querySelectorAll('#usersTable [data-bs-toggle="dropdown"]').forEach(function(el) {
+                    bootstrap.Dropdown.getOrCreateInstance(el, {
+                        popperConfig: { strategy: 'fixed' }
+                    });
+                });
+            }
+
             $('#usersTable').DataTable({
                 order: [[4, 'desc']],
                 scrollX: true,
                 autoWidth: false,
-                columnDefs: [{ orderable: false, targets: 5 }]
+                columnDefs: [{ orderable: false, targets: 5 }],
+                drawCallback: initUserDropdowns
+            });
+            initUserDropdowns();
+
+            $('#usersTable').on('click', '.js-pick-upgrade', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var form = this.closest('form');
+                if (!form) {
+                    Swal.fire('Error', 'Upgrade form not found. Please refresh the page.', 'error');
+                    return;
+                }
+                var planKey = this.getAttribute('data-plan-key') || 'monthly';
+                var confirmMsg = this.getAttribute('data-confirm-msg') || 'Upgrade this user to Premium?';
+                var keyInput = form.querySelector('input[name="plan_key"]');
+                if (keyInput) keyInput.value = planKey;
+                confirmUpdate(e, form, confirmMsg, 'Yes, Upgrade', false);
+            });
+
+            $('#usersTable').on('click', '.js-confirm-form', function(e) {
+                e.preventDefault();
+                var form = this.closest('form');
+                if (!form) return;
+                var msg = this.getAttribute('data-confirm-msg') || 'Are you sure?';
+                var confirmBtn = this.getAttribute('data-confirm-btn') || 'Yes';
+                var isDanger = this.getAttribute('data-is-danger') === '1';
+                confirmUpdate(e, form, msg, confirmBtn, isDanger);
+            });
+
+            $('#manualPlanApplyBtn').on('click', function(e) {
+                var form = document.getElementById('manualPlanForm');
+                if (form) submitManualPlan(e, form);
             });
         });
     </script>
