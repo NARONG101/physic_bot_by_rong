@@ -1909,9 +1909,6 @@ def upgrade_reports():
         </tr>
         """
 
-    if not rows:
-        rows = "<tr><td colspan='6' class='text-center text-muted py-4'>No upgrade records found.</td></tr>"
-
     content = f"""
     <div class="d-flex justify-content-between align-items-center mb-4 page-header-row">
         <div>
@@ -1964,7 +1961,16 @@ def upgrade_reports():
         </div>
     </div>
     """
-    scripts = "<script>$(document).ready(function(){ $('#upgradeReportsTable').DataTable({'order': [[ 0, 'desc' ]], scrollX: true, autoWidth: false}); });</script>"
+    scripts = """<script>
+        $(document).ready(function() {
+            $('#upgradeReportsTable').DataTable({
+                order: [[0, 'desc']],
+                scrollX: true,
+                autoWidth: false,
+                language: { emptyTable: 'No upgrade records found.' }
+            });
+        });
+    </script>"""
     return render_template_string(BASE_HTML, page_content=content, extra_scripts=scripts)
 
 @app.route('/toggle_ban', methods=['POST'])
