@@ -7,6 +7,5 @@ __pycache__/
 *$py.class
 .Python
 uploads/
-Json/chat_history.json
 Json/usage_tracking.json
 *.lock

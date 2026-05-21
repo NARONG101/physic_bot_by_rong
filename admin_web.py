@@ -17,7 +17,7 @@ from werkzeug.utils import secure_filename
 
 from history_retention import filter_retention 
 
-# 🚀 Import our hybrid SQLite user manager
+# 🚀 Import JSON-backed user manager (persists in Json/ like feedback)
 import user_db
 
 # Load Environment Variables from this package folder

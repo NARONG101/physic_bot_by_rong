@@ -1,9 +1,17 @@
-import sqlite3
+import json
 import os
+import sqlite3
 from datetime import datetime, timedelta
 
-# Create the SQLite database in the current directory
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'users.db')
+from filelock import FileLock
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+JSON_DIR = os.path.join(CURRENT_DIR, "Json")
+os.makedirs(JSON_DIR, exist_ok=True)
+
+USERS_FILE = os.path.join(JSON_DIR, "user_accounts.json")
+UPGRADE_HISTORY_FILE = os.path.join(JSON_DIR, "upgrade_history.json")
+LEGACY_DB_PATH = os.path.join(CURRENT_DIR, "users.db")
 
 UPGRADE_PLANS = {
     "monthly": {"days": 30, "price": 2.99, "label": "Monthly"},
@@ -11,86 +19,162 @@ UPGRADE_PLANS = {
     "yearly": {"days": 365, "price": 30.0, "label": "Yearly"},
 }
 
-def get_db():
-    """Establish a connection to the SQLite database."""
-    # check_same_thread=False allows Flask (admin_web) and Asyncio (bot) to share the DB safely
-    conn = sqlite3.connect(DB_PATH, timeout=15, check_same_thread=False)
-    conn.row_factory = sqlite3.Row  # Allows accessing columns by name like a dictionary
-    
-    # Enable Write-Ahead Logging for better concurrent read/write performance
-    conn.execute('pragma journal_mode=wal')
-    return conn
+
+def _lock_path(path: str) -> str:
+    return path + ".lock"
+
+
+def _read_json_unlocked(path: str, default):
+    if not os.path.exists(path):
+        return default() if callable(default) else default
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return default() if callable(default) else default
+    if isinstance(default, dict) and isinstance(data, dict):
+        return data
+    if isinstance(default, list) and isinstance(data, list):
+        return data
+    return default() if callable(default) else default
+
+
+def _write_json_unlocked(path: str, data) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def _read_json(path: str, default):
+    with FileLock(_lock_path(path), timeout=15):
+        return _read_json_unlocked(path, default)
+
+
+def _write_json(path: str, data) -> None:
+    with FileLock(_lock_path(path), timeout=15):
+        _write_json_unlocked(path, data)
+
+
+def _load_users() -> dict:
+    return _read_json(USERS_FILE, dict)
+
+
+def _save_users(users: dict) -> None:
+    _write_json(USERS_FILE, users)
+
+
+def _load_upgrade_history() -> list:
+    return _read_json(UPGRADE_HISTORY_FILE, list)
+
+
+def _save_upgrade_history(records: list) -> None:
+    _write_json(UPGRADE_HISTORY_FILE, records)
+
+
+def _next_upgrade_id(records: list) -> int:
+    if not records:
+        return 1
+    return max(int(r.get("id", 0) or 0) for r in records) + 1
+
+
+def _migrate_sqlite_if_needed() -> None:
+    """One-time import from legacy users.db into JSON files."""
+    if not os.path.exists(LEGACY_DB_PATH):
+        return
+    users = _load_users()
+    history = _load_upgrade_history()
+    if users and history:
+        return
+
+    try:
+        conn = sqlite3.connect(LEGACY_DB_PATH, timeout=15)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        if not users:
+            for row in cursor.execute("SELECT * FROM users").fetchall():
+                uid = str(row["user_id"])
+                users[uid] = {
+                    "user_id": uid,
+                    "username": row["username"] or "Unknown",
+                    "plan": row["plan"] or "Free Plan",
+                    "expiry_date": row["expiry_date"],
+                    "is_banned": bool(row["is_banned"]),
+                }
+        if not history:
+            for row in cursor.execute(
+                "SELECT id, user_id, username, plan_key, plan_label, duration_days, amount, upgraded_at "
+                "FROM upgrade_history ORDER BY id ASC"
+            ).fetchall():
+                history.append(
+                    {
+                        "id": int(row["id"]),
+                        "user_id": str(row["user_id"]),
+                        "username": row["username"] or "Unknown",
+                        "plan_key": row["plan_key"],
+                        "plan_label": row["plan_label"],
+                        "duration_days": int(row["duration_days"]),
+                        "amount": float(row["amount"] or 0.0),
+                        "upgraded_at": row["upgraded_at"],
+                    }
+                )
+        conn.close()
+        if users:
+            _save_users(users)
+        if history:
+            _save_upgrade_history(history)
+        print("Migrated user data from SQLite (users.db) to JSON files.")
+    except Exception as exc:
+        print(f"SQLite migration skipped: {exc}")
+
 
 def init_db():
-    """Initialize the database and ensure all columns exist."""
-    with get_db() as conn:
-        cursor = conn.cursor()
-        # Create table with the new is_banned column for brand new databases
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                user_id TEXT PRIMARY KEY,
-                username TEXT,
-                plan TEXT DEFAULT 'Free Plan',
-                expiry_date TEXT,
-                is_banned INTEGER DEFAULT 0
-            )
-        ''')
-        
-        # 🚀 Safe Migration: Add the column to existing databases if it's missing
-        try:
-            cursor.execute('ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0')
-        except sqlite3.OperationalError:
-            # OperationalError means the column already exists, which is perfectly fine.
-            pass 
+    """Ensure JSON data files exist (replaces SQLite init)."""
+    if not os.path.exists(USERS_FILE):
+        _save_users({})
+    if not os.path.exists(UPGRADE_HISTORY_FILE):
+        _save_upgrade_history([])
+    _migrate_sqlite_if_needed()
 
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS upgrade_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id TEXT NOT NULL,
-                username TEXT,
-                plan_key TEXT NOT NULL,
-                plan_label TEXT NOT NULL,
-                duration_days INTEGER NOT NULL,
-                amount REAL NOT NULL,
-                upgraded_at TEXT NOT NULL
-            )
-        ''')
-            
-        conn.commit()
 
-# Auto-initialize table on import
 init_db()
+
 
 def get_user_plan(user_id, username="Unknown"):
     """Get the user's plan, register them if new, and auto-downgrade if expired."""
     uid = str(user_id)
-    # Use full precise time for accurate 30-day expirations
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    with get_db() as conn:
-        cursor = conn.cursor()
-        user = cursor.execute('SELECT * FROM users WHERE user_id = ?', (uid,)).fetchone()
-        
-        # 1. If user doesn't exist, create them as Free Plan
-        if not user:
-            cursor.execute('INSERT INTO users (user_id, username, plan, is_banned) VALUES (?, ?, ?, ?)', 
-                           (uid, username, 'Free Plan', 0))
-            conn.commit()
-            return 'Free Plan'
-            
-        # 2. Check if Premium has expired (auto-downgrade)
-        if user['plan'] == 'Premium' and user['expiry_date'] and user['expiry_date'] < now_str:
-            cursor.execute('UPDATE users SET plan = ?, expiry_date = NULL WHERE user_id = ?', 
-                           ('Free Plan', uid))
-            conn.commit()
-            return 'Free Plan'
-            
-        # 3. Update username if they changed it on Telegram
-        if user['username'] != username:
-            cursor.execute('UPDATE users SET username = ? WHERE user_id = ?', (username, uid))
-            conn.commit()
 
-        return user['plan']
+    with FileLock(_lock_path(USERS_FILE), timeout=15):
+        users = _read_json_unlocked(USERS_FILE, dict)
+        user = users.get(uid)
+
+        if not user:
+            users[uid] = {
+                "user_id": uid,
+                "username": username,
+                "plan": "Free Plan",
+                "expiry_date": None,
+                "is_banned": False,
+            }
+            _write_json_unlocked(USERS_FILE, users)
+            return "Free Plan"
+
+        plan = user.get("plan", "Free Plan")
+        expiry = user.get("expiry_date")
+
+        if plan == "Premium" and expiry and expiry < now_str:
+            user["plan"] = "Free Plan"
+            user["expiry_date"] = None
+            users[uid] = user
+            _write_json_unlocked(USERS_FILE, users)
+            return "Free Plan"
+
+        if user.get("username") != username:
+            user["username"] = username
+            users[uid] = user
+            _write_json_unlocked(USERS_FILE, users)
+
+        return user.get("plan", "Free Plan")
+
 
 def set_user_plan(
     user_id,
@@ -102,10 +186,9 @@ def set_user_plan(
     plan_key=None,
     plan_label=None,
 ):
-    """Update a user's plan (Triggered from Admin Dashboard)."""
+    """Update a user's plan (triggered from Admin Dashboard)."""
     uid = str(user_id)
-    
-    # If upgrading to Premium, default expiry is 30 days unless a custom duration is provided.
+
     if plan == "Premium":
         final_days = int(duration_days) if duration_days else 30
         expiry = (datetime.now() + timedelta(days=final_days)).strftime("%Y-%m-%d %H:%M:%S")
@@ -113,100 +196,92 @@ def set_user_plan(
         final_days = 0
         expiry = None
 
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO users (user_id, username, plan, expiry_date, is_banned) 
-            VALUES (?, ?, ?, ?, 0)
-            ON CONFLICT(user_id) DO UPDATE SET 
-                username=excluded.username, 
-                plan=excluded.plan, 
-                expiry_date=excluded.expiry_date
-        ''', (uid, username, plan, expiry))
+    with FileLock(_lock_path(USERS_FILE), timeout=15):
+        users = _read_json_unlocked(USERS_FILE, dict)
+        existing = users.get(uid, {})
+        users[uid] = {
+            "user_id": uid,
+            "username": username or existing.get("username", "Unknown"),
+            "plan": plan,
+            "expiry_date": expiry,
+            "is_banned": bool(existing.get("is_banned", False)),
+        }
+        _write_json_unlocked(USERS_FILE, users)
 
-        if plan == "Premium" and record_upgrade:
-            amount = float(upgrade_price or 0.0)
-            safe_plan_key = plan_key or "custom"
-            final_label = (plan_label or "").strip() or UPGRADE_PLANS.get(safe_plan_key, {}).get("label", safe_plan_key)
-            cursor.execute('''
-                INSERT INTO upgrade_history (
-                    user_id, username, plan_key, plan_label, duration_days, amount, upgraded_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                uid,
-                username or "Unknown",
-                safe_plan_key,
-                final_label,
-                final_days,
-                amount,
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            ))
-        conn.commit()
+    if plan == "Premium" and record_upgrade:
+        amount = float(upgrade_price or 0.0)
+        safe_plan_key = plan_key or "custom"
+        final_label = (plan_label or "").strip() or UPGRADE_PLANS.get(safe_plan_key, {}).get(
+            "label", safe_plan_key
+        )
+        with FileLock(_lock_path(UPGRADE_HISTORY_FILE), timeout=15):
+            records = _read_json_unlocked(UPGRADE_HISTORY_FILE, list)
+            records.append(
+                {
+                    "id": _next_upgrade_id(records),
+                    "user_id": uid,
+                    "username": username or "Unknown",
+                    "plan_key": safe_plan_key,
+                    "plan_label": final_label,
+                    "duration_days": final_days,
+                    "amount": amount,
+                    "upgraded_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                }
+            )
+            _write_json_unlocked(UPGRADE_HISTORY_FILE, records)
+
 
 def get_all_users_dict():
-    """Fetch all users from the database to display in the Admin Panel."""
-    with get_db() as conn:
-        rows = conn.cursor().execute('SELECT * FROM users').fetchall()
-        # Return a dictionary mapped by user_id for easy lookup in Admin panel
-        return {row['user_id']: dict(row) for row in rows}
+    """Fetch all users for the Admin Panel."""
+    users = _load_users()
+    return {uid: dict(data) for uid, data in users.items()}
 
-# --- 🚀 BAN FEATURES ---
 
 def is_banned(user_id):
     """Checks if a user is currently banned."""
     uid = str(user_id)
-    with get_db() as conn:
-        user = conn.cursor().execute('SELECT is_banned FROM users WHERE user_id = ?', (uid,)).fetchone()
-        if user:
-            return bool(user['is_banned'])
-        return False
+    user = _load_users().get(uid)
+    if user:
+        return bool(user.get("is_banned", False))
+    return False
+
 
 def set_banned(user_id, status: bool):
     """Updates the ban status of a specific user."""
     uid = str(user_id)
-    banned_int = 1 if status else 0 
-    
-    with get_db() as conn:
-        # Use UPSERT to allow banning an ID even if they haven't messaged the bot yet
-        # FIXED: Provided all 4 values for the 4 columns in the INSERT statement
-        conn.cursor().execute('''
-            INSERT INTO users (user_id, username, plan, is_banned) 
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(user_id) DO UPDATE SET 
-                is_banned=excluded.is_banned
-        ''', (uid, 'Unknown', 'Free Plan', banned_int))
-        conn.commit()
+
+    with FileLock(_lock_path(USERS_FILE), timeout=15):
+        users = _read_json_unlocked(USERS_FILE, dict)
+        existing = users.get(uid, {})
+        users[uid] = {
+            "user_id": uid,
+            "username": existing.get("username", "Unknown"),
+            "plan": existing.get("plan", "Free Plan"),
+            "expiry_date": existing.get("expiry_date"),
+            "is_banned": bool(status),
+        }
+        _write_json_unlocked(USERS_FILE, users)
 
 
 def get_upgrade_history(user_id=None, limit=200):
     """Return latest upgrade transactions, optionally filtered by user_id."""
-    sql = '''
-        SELECT id, user_id, username, plan_key, plan_label, duration_days, amount, upgraded_at
-        FROM upgrade_history
-    '''
-    params = []
+    records = _load_upgrade_history()
     if user_id:
-        sql += ' WHERE user_id = ?'
-        params.append(str(user_id))
-    sql += ' ORDER BY id DESC LIMIT ?'
-    params.append(int(limit))
-
-    with get_db() as conn:
-        rows = conn.cursor().execute(sql, params).fetchall()
-        return [dict(row) for row in rows]
+        uid = str(user_id)
+        records = [r for r in records if str(r.get("user_id")) == uid]
+    records = sorted(records, key=lambda r: int(r.get("id", 0) or 0), reverse=True)
+    return records[: int(limit)]
 
 
 def get_upgrade_summary(user_id=None):
     """Return aggregate upgrade stats (count and total revenue)."""
-    sql = 'SELECT COUNT(*) AS total_upgrades, COALESCE(SUM(amount), 0) AS total_revenue FROM upgrade_history'
-    params = []
+    records = _load_upgrade_history()
     if user_id:
-        sql += ' WHERE user_id = ?'
-        params.append(str(user_id))
-
-    with get_db() as conn:
-        row = conn.cursor().execute(sql, params).fetchone()
-        return {
-            "total_upgrades": int(row["total_upgrades"] or 0),
-            "total_revenue": float(row["total_revenue"] or 0.0),
-        }
+        uid = str(user_id)
+        records = [r for r in records if str(r.get("user_id")) == uid]
+    total_upgrades = len(records)
+    total_revenue = sum(float(r.get("amount", 0) or 0) for r in records)
+    return {
+        "total_upgrades": total_upgrades,
+        "total_revenue": total_revenue,
+    }
