@@ -80,7 +80,8 @@ def _digest256(value: str) -> bytes:
 
 # --- PATHS CONFIGURATION ---
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-JSON_DIR = os.path.join(CURRENT_DIR, 'Json') 
+# On Render: attach a persistent disk and set DATA_DIR=/data so upgrades survive restarts.
+JSON_DIR = os.environ.get('DATA_DIR', os.path.join(CURRENT_DIR, 'Json')) 
 UPLOAD_DIR = os.path.join(CURRENT_DIR, 'uploads')
 
 os.makedirs(JSON_DIR, exist_ok=True)
@@ -1952,23 +1953,41 @@ def update_plan():
 
     if plan == "Premium":
         selected = _get_upgrade_pricing(get_bot_settings()).get(plan_key or "monthly", UPGRADE_OPTIONS["monthly"])
-        user_db.set_user_plan(
-            uid,
-            username,
-            plan,
-            duration_days=selected["days"],
-            upgrade_price=selected["price"],
-            record_upgrade=True,
-            plan_key=(plan_key or "monthly"),
-            plan_label=selected.get("label", plan_key or "monthly"),
-        )
+        try:
+            user_db.set_user_plan(
+                uid,
+                username,
+                plan,
+                duration_days=selected["days"],
+                upgrade_price=selected["price"],
+                record_upgrade=True,
+                plan_key=(plan_key or "monthly"),
+                plan_label=selected.get("label", plan_key or "monthly"),
+            )
+        except Exception as exc:
+            flash(f"Upgrade failed to save: {exc}", "danger")
+            return redirect(url_for('users_list'))
+
+        saved_plan = user_db.get_user_plan(uid, username)
+        if saved_plan != "Premium":
+            flash(
+                "Upgrade could not be saved. On Render, attach a Persistent Disk and set "
+                "environment variable DATA_DIR to the mount path (for example /data).",
+                "danger",
+            )
+            return redirect(url_for('users_list'))
+
         flash(
             f"Success! User {uid} upgraded to {selected['label']} Premium "
             f"({selected['days']} days) for ${selected['price']:.2f}.",
             "success"
         )
     else:
-        user_db.set_user_plan(uid, username, "Free Plan")
+        try:
+            user_db.set_user_plan(uid, username, "Free Plan")
+        except Exception as exc:
+            flash(f"Downgrade failed to save: {exc}", "danger")
+            return redirect(url_for('users_list'))
         flash(f"User {uid} has been downgraded to the Free plan.", "warning")
         
     return redirect(url_for('users_list'))

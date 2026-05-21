@@ -1,1 +1,1 @@
-web: python khmer_physics_bot/run_render.py
+web: gunicorn -c gunicorn.conf.py admin_web:app

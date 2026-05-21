@@ -8,4 +8,10 @@ __pycache__/
 .Python
 uploads/
 Json/usage_tracking.json
+users.db
+users.db-wal
+users.db-shm
+**/users.db
+**/users.db-wal
+**/users.db-shm
 *.lock

@@ -37,7 +37,7 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 
 # --- 🚀 PATHS CONFIGURATION ---
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-JSON_DIR = os.path.join(CURRENT_DIR, 'Json')
+JSON_DIR = os.environ.get('DATA_DIR', os.path.join(CURRENT_DIR, 'Json'))
 UPLOAD_DIR = os.path.join(CURRENT_DIR, 'uploads')
 
 os.makedirs(JSON_DIR, exist_ok=True)
