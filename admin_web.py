@@ -399,7 +399,7 @@ BASE_HTML = """
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Phy_Chatbot | Admin Pro</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -705,6 +705,135 @@ BASE_HTML = """
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        #ht td.conversation-cell { min-width: 400px; max-width: 600px; }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            z-index: 999;
+            backdrop-filter: blur(2px);
+        }
+        .mobile-topbar {
+            display: none;
+            position: sticky;
+            top: 0;
+            z-index: 900;
+            background: var(--ui-surface);
+            border-bottom: 1px solid var(--ui-border);
+            padding: 12px 14px;
+            margin: -40px -50px 20px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+        }
+        .mobile-topbar-title {
+            font-weight: 800;
+            font-size: 1rem;
+            color: var(--ui-text);
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mobile-menu-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid var(--ui-border);
+            background: var(--ui-surface-2);
+            color: var(--ui-text);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        body.login-page .main-content { align-items: flex-start; padding-top: 12px; }
+
+        @media (max-width: 991.98px) {
+            body { font-size: 15px; }
+            .sidebar {
+                width: min(280px, 86vw);
+                transform: translateX(-105%);
+                transition: transform 0.25s ease;
+                box-shadow: 8px 0 24px rgba(2, 6, 23, 0.35);
+            }
+            body.sidebar-open { overflow: hidden; }
+            body.sidebar-open .sidebar { transform: translateX(0); }
+            body.sidebar-open .sidebar-backdrop { display: block; }
+            .main-content,
+            body.sidebar-collapsed .main-content { margin-left: 0 !important; }
+            body.sidebar-collapsed .sidebar { width: min(280px, 86vw); transform: translateX(-105%); }
+            body.sidebar-collapsed .sidebar h4 span,
+            body.sidebar-collapsed .sidebar a span,
+            body.sidebar-collapsed .sidebar .nav-link,
+            body.sidebar-collapsed .sidebar .logout-box { display: block !important; }
+            body.sidebar-collapsed .sidebar a { text-align: left; padding: 14px 20px; }
+            body.sidebar-collapsed .sidebar a i { margin-right: 12px; }
+            .mobile-topbar { display: flex; align-items: center; gap: 12px; }
+            .content-container { padding: 20px 14px 28px; }
+            .mobile-topbar { margin: -20px -14px 18px; }
+            h2.fw-bold { font-size: 1.45rem; }
+            .content-container .fs-5 { font-size: 0.95rem !important; }
+            .stat-card h1 { font-size: 1.85rem; }
+            .stat-card h5 { font-size: 0.78rem; }
+            .stat-card i.bg-icon { font-size: 3.5rem; }
+            .stat-card { padding: 1rem; }
+            .card { padding: 1rem !important; }
+            .card.p-4 { padding: 1rem !important; }
+            .table thead th,
+            .table tbody td { padding: 10px 8px; font-size: 0.88rem; }
+            .btn { font-size: 0.9rem; padding: 0.5rem 0.85rem; }
+            .alert.fs-5 { font-size: 0.95rem !important; }
+            .content-container > .d-flex.justify-content-between.align-items-center,
+            .content-container > .d-flex.justify-content-between.align-items-start {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 0.85rem;
+            }
+            .content-container > .d-flex.justify-content-between .d-flex.gap-3,
+            .content-container > .d-flex.justify-content-between .btn,
+            .content-container > .d-flex.justify-content-between form {
+                width: 100%;
+            }
+            .content-container > .d-flex.justify-content-between .d-flex.gap-3 {
+                flex-wrap: wrap;
+            }
+            .content-container > .d-flex.justify-content-between .btn {
+                width: 100%;
+            }
+            .stat-cards-row > [class*="col-"] {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
+            .dataTables_wrapper .dataTables_length,
+            .dataTables_wrapper .dataTables_filter {
+                text-align: left;
+                margin-bottom: 0.5rem;
+            }
+            .dataTables_wrapper .dataTables_filter input {
+                width: 100% !important;
+                max-width: 100%;
+                margin-left: 0 !important;
+            }
+            .table-responsive { -webkit-overflow-scrolling: touch; }
+            #ht td.conversation-cell {
+                min-width: 0 !important;
+                max-width: none !important;
+            }
+            .login-card-body { padding: 24px 18px; }
+            .login-shell { margin-top: 0; padding: 0 8px; }
+        }
+
+        @media (max-width: 575.98px) {
+            body { font-size: 14px; }
+            h2.fw-bold { font-size: 1.25rem; }
+            .stat-cards-row > [class*="col-"] {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+            .form-control-lg,
+            .input-group-lg > .form-control { font-size: 1rem; padding: 0.65rem 0.85rem; }
+        }
     </style>
 </head>
 <body>
@@ -717,6 +846,7 @@ BASE_HTML = """
         })();
     </script>
     {% if session.logged_in %}
+    <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
     <div class="sidebar">
         <div class="sidebar-header">
             <h4><i class="fa-solid fa-atom"></i> <span>Phy_Admin</span></h4>
@@ -741,6 +871,14 @@ BASE_HTML = """
 
     <div class="main-content">
         <div class="content-container">
+            {% if session.logged_in %}
+            <div class="mobile-topbar d-lg-none">
+                <button type="button" class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <p class="mobile-topbar-title mb-0"><i class="fa-solid fa-atom text-primary me-2"></i>Phy Admin</p>
+            </div>
+            {% endif %}
             <div id="alert-container">
                 {% with messages = get_flashed_messages(with_categories=true) %}
                   {% if messages %}
@@ -775,10 +913,30 @@ BASE_HTML = """
             });
             setTimeout(function() { $('.alert').alert('close'); }, 5000);
 
-            $('#sidebarToggleBtn').on('click', function() {
-                document.body.classList.toggle('sidebar-collapsed');
-                const collapsed = document.body.classList.contains('sidebar-collapsed');
-                localStorage.setItem('phy_admin_sidebar', collapsed ? 'collapsed' : 'expanded');
+            function isMobileLayout() {
+                return window.matchMedia('(max-width: 991.98px)').matches;
+            }
+            function closeMobileSidebar() {
+                document.body.classList.remove('sidebar-open');
+            }
+            function openMobileSidebar() {
+                document.body.classList.add('sidebar-open');
+            }
+            $('#sidebarToggleBtn, #mobileMenuBtn').on('click', function() {
+                if (isMobileLayout()) {
+                    document.body.classList.toggle('sidebar-open');
+                } else {
+                    document.body.classList.toggle('sidebar-collapsed');
+                    const collapsed = document.body.classList.contains('sidebar-collapsed');
+                    localStorage.setItem('phy_admin_sidebar', collapsed ? 'collapsed' : 'expanded');
+                }
+            });
+            $('#sidebarBackdrop').on('click', closeMobileSidebar);
+            $('.sidebar .nav-link, .sidebar .logout-btn').on('click', function() {
+                if (isMobileLayout()) closeMobileSidebar();
+            });
+            $(window).on('resize', function() {
+                if (!isMobileLayout()) closeMobileSidebar();
             });
         });
 
@@ -1006,43 +1164,43 @@ def dashboard():
         <div class="bg-white px-4 py-2 rounded-pill shadow-sm border fs-5">{status_html}</div>
     </div>
     
-    <div class="row mb-4 g-4">
-        <div class="col-lg-2 col-md-4">
+    <div class="row mb-4 g-4 stat-cards-row">
+        <div class="col-6 col-md-4 col-lg-2">
             <a href="/users" class="stat-link text-decoration-none">
                 <div class="stat-card bg-grad-primary shadow-sm border-0">
                     <h5 class="mb-1">Total Users</h5><h1 class="mb-0">{total_users}</h1><i class="fa-solid fa-users bg-icon"></i>
                 </div>
             </a>
         </div>
-        <div class="col-lg-2 col-md-4">
+        <div class="col-6 col-md-4 col-lg-2">
             <a href="/users" class="stat-link text-decoration-none">
                 <div class="stat-card bg-grad-success shadow-sm border-0">
                     <h5 class="mb-1">Premium Users</h5><h1 class="mb-0">{premium_count}</h1><i class="fa-solid fa-crown bg-icon"></i>
                 </div>
             </a>
         </div>
-        <div class="col-lg-2 col-md-4">
+        <div class="col-6 col-md-4 col-lg-2">
             <a href="/history" class="stat-link text-decoration-none">
                 <div class="stat-card bg-grad-warning shadow-sm border-0">
                     <h5 class="mb-1">Messages Today</h5><h1 class="mb-0">{msgs_today}</h1><i class="fa-solid fa-message bg-icon"></i>
                 </div>
             </a>
         </div>
-        <div class="col-lg-2 col-md-4">
+        <div class="col-6 col-md-4 col-lg-2">
             <a href="/users" class="stat-link text-decoration-none">
                 <div class="stat-card bg-grad-danger shadow-sm border-0">
                     <h5 class="mb-1">Banned Users</h5><h1 class="mb-0">{banned_count}</h1><i class="fa-solid fa-ban bg-icon"></i>
                 </div>
             </a>
         </div>
-        <div class="col-lg-2 col-md-4">
+        <div class="col-6 col-md-4 col-lg-2">
             <a href="/upgrade_reports" class="stat-link text-decoration-none">
                 <div class="stat-card bg-grad-success shadow-sm border-0" style="background: linear-gradient(135deg, #16a34a, #22c55e);">
                     <h5 class="mb-1">Total Revenue</h5><h1 class="mb-0">${total_revenue:.2f}</h1><i class="fa-solid fa-dollar-sign bg-icon"></i>
                 </div>
             </a>
         </div>
-        <div class="col-lg-2 col-md-4">
+        <div class="col-6 col-md-4 col-lg-2">
             <a href="/feedback" class="stat-link text-decoration-none">
                 <div class="stat-card bg-grad-primary shadow-sm border-0">
                     <h5 class="mb-1">User Feedback</h5><h1 class="mb-0">{total_feedback}</h1><i class="fa-solid fa-comment-dots bg-icon"></i>
@@ -1610,7 +1768,7 @@ def users_list():
         </div>
     </div>
     """
-    return render_template_string(BASE_HTML, page_content=content, extra_scripts="<script>$(document).ready(function(){ $('#usersTable').DataTable({'order': [[ 4, 'desc' ]]}); });</script>")
+    return render_template_string(BASE_HTML, page_content=content, extra_scripts="<script>$(document).ready(function(){ $('#usersTable').DataTable({'order': [[ 4, 'desc' ]], scrollX: true, autoWidth: false}); });</script>")
 
 @app.route('/update_plan', methods=['POST'])
 @login_required
@@ -1731,7 +1889,7 @@ def upgrade_reports():
         </div>
     </div>
     """
-    scripts = "<script>$(document).ready(function(){ $('#upgradeReportsTable').DataTable({'order': [[ 0, 'desc' ]]}); });</script>"
+    scripts = "<script>$(document).ready(function(){ $('#upgradeReportsTable').DataTable({'order': [[ 0, 'desc' ]], scrollX: true, autoWidth: false}); });</script>"
     return render_template_string(BASE_HTML, page_content=content, extra_scripts=scripts)
 
 @app.route('/toggle_ban', methods=['POST'])
@@ -1938,7 +2096,7 @@ def history():
                     <div class="fw-bold text-primary">@{username_str}</div>
                 </div>
             </td>
-            <td class="align-middle py-4" style="min-width: 400px; max-width: 600px;">
+            <td class="align-middle py-4 conversation-cell">
                 <div class="d-flex align-items-start mb-3">
                     <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-3 fw-bold flex-shrink-0" style="width: 32px; height: 32px; font-size: 14px;">{avatar_letter}</div>
                     <div class="bg-light border rounded-3 p-3 text-dark shadow-sm w-100" style="border-top-left-radius: 0 !important; font-size: 0.95rem;">
@@ -2010,7 +2168,7 @@ def history():
     </div>
     """
     # Initialize DataTables with our 4 columns (Action is index 3)
-    return render_template_string(BASE_HTML, page_content=content, extra_scripts="<script>$(document).ready(function(){ $('#ht').DataTable({'order': [], 'columnDefs': [{ 'orderable': false, 'targets': 3 }]}); });</script>")
+    return render_template_string(BASE_HTML, page_content=content, extra_scripts="<script>$(document).ready(function(){ $('#ht').DataTable({'order': [], scrollX: true, autoWidth: false, columnDefs: [{ orderable: false, targets: 3 }]}); });</script>")
 
 
 @app.route('/history/delete_entry', methods=['POST'])
