@@ -441,15 +441,33 @@ BASE_HTML = """
             height: 100vh;
             background: linear-gradient(180deg, #0f172a, #0b1733 55%, #0a1330);
             color: white;
-            padding-top: 22px;
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: var(--sidebar-w);
+            padding: 0;
+            border: 0;
             box-shadow: 4px 0 18px rgba(2,6,23,0.25);
-            z-index: 1001;
+            z-index: 1045;
+        }
+        .sidebar .offcanvas-body {
             display: flex;
             flex-direction: column;
+            height: 100%;
+            padding: 0;
+            padding-top: 22px;
+            overflow-y: auto;
+        }
+        @media (min-width: 992px) {
+            #adminSidebar.sidebar.offcanvas-lg {
+                position: fixed !important;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                height: 100vh;
+                width: var(--sidebar-w) !important;
+                max-width: var(--sidebar-w);
+                transform: none !important;
+                visibility: visible !important;
+                display: flex !important;
+                flex-direction: column;
+            }
         }
         .sidebar-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 16px 16px; margin-bottom: 12px; }
         .sidebar h4 { text-align: left; margin: 0; font-weight: 800; color: #38bdf8; letter-spacing: 1px; font-size: 1.25rem;}
@@ -470,7 +488,7 @@ BASE_HTML = """
         .logout-box { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-bottom: 20px; }
         .main-content { margin-left: var(--sidebar-w); min-height: 100vh; width: calc(100% - var(--sidebar-w)); }
         @media (min-width: 992px) {
-            body.sidebar-collapsed .sidebar { width: 84px; }
+            body.sidebar-collapsed #adminSidebar.sidebar { width: 84px !important; max-width: 84px !important; }
             body.sidebar-collapsed .main-content { margin-left: 84px; width: calc(100% - 84px); }
             body.sidebar-collapsed .sidebar h4 span,
             body.sidebar-collapsed .sidebar a span { display: none; }
@@ -722,14 +740,6 @@ BASE_HTML = """
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         #ht td.conversation-cell { min-width: 400px; max-width: 600px; }
 
-        .sidebar-backdrop {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.55);
-            z-index: 999;
-            backdrop-filter: blur(2px);
-        }
         .mobile-topbar {
             display: none;
             position: sticky;
@@ -770,44 +780,21 @@ BASE_HTML = """
                 overflow-x: hidden;
             }
             body { font-size: 15px; }
-            body.sidebar-collapsed .sidebar,
-            .sidebar {
-                width: min(292px, 88vw) !important;
-                left: 0 !important;
-                top: 0 !important;
-                margin-left: 0 !important;
-                transform: translate3d(-110%, 0, 0) !important;
-                transition: transform 0.28s ease !important;
-                box-shadow: 8px 0 24px rgba(2, 6, 23, 0.35);
-                visibility: visible;
+            #adminSidebar.sidebar {
+                --bs-offcanvas-width: min(300px, 88vw);
             }
-            body.sidebar-open {
-                overflow: hidden;
-                position: fixed;
-                width: 100%;
-            }
-            body.sidebar-open .sidebar {
-                transform: translate3d(0, 0, 0) !important;
-            }
-            body.sidebar-open .sidebar-backdrop { display: block; }
             .main-content,
             body.sidebar-collapsed .main-content {
                 margin-left: 0 !important;
                 width: 100% !important;
-                max-width: 100vw !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
             }
-            body.sidebar-collapsed .sidebar h4 span,
-            body.sidebar-collapsed .sidebar a span,
-            body.sidebar-collapsed .sidebar .nav-link,
-            body.sidebar-collapsed .sidebar .logout-box {
-                display: block !important;
+            .content-container {
+                width: 100%;
+                min-width: 0;
+                box-sizing: border-box;
             }
-            body.sidebar-collapsed .sidebar a {
-                text-align: left !important;
-                padding: 14px 20px !important;
-            }
-            body.sidebar-collapsed .sidebar a i { margin-right: 12px !important; }
-            body.sidebar-collapsed .sidebar-header h4 { display: block !important; }
             #sidebarToggleBtn { display: none !important; }
             .mobile-topbar {
                 display: flex !important;
@@ -865,12 +852,17 @@ BASE_HTML = """
                 max-width: 100% !important;
                 width: 100% !important;
             }
-            .stat-link, .stat-link .stat-card { width: 100%; }
-            .row.g-4 > [class*="col-md-8"],
-            .row.g-4 > [class*="col-md-4"] {
+            .stat-link, .stat-link .stat-card { width: 100%; max-width: 100%; }
+            .row.g-4 > [class*="col-"],
+            .row.g-3 > [class*="col-"],
+            .row.mb-4 > [class*="col-"] {
                 flex: 0 0 100%;
                 max-width: 100%;
+                width: 100%;
             }
+            .card:hover { transform: none; }
+            img { max-width: 100%; height: auto; }
+            .dataTables_wrapper { width: 100%; overflow-x: auto; }
             .dataTables_wrapper .dataTables_length,
             .dataTables_wrapper .dataTables_filter {
                 text-align: left;
@@ -914,25 +906,29 @@ BASE_HTML = """
         })();
     </script>
     {% if session.logged_in %}
-    <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h4><i class="fa-solid fa-atom"></i> <span>Phy_Admin</span></h4>
-            <button id="sidebarToggleBtn" class="sidebar-toggle-btn" type="button" title="Toggle sidebar">
-                <i class="fa-solid fa-bars"></i>
-            </button>
+    <div class="sidebar offcanvas offcanvas-start offcanvas-lg" tabindex="-1" id="adminSidebar" aria-labelledby="adminSidebarLabel">
+        <div class="offcanvas-header d-lg-none border-bottom border-secondary border-opacity-25">
+            <h5 class="offcanvas-title text-info fw-bold mb-0" id="adminSidebarLabel"><i class="fa-solid fa-atom me-2"></i>Phy_Admin</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close menu"></button>
         </div>
-        <a href="/" class="nav-link"><i class="fa-solid fa-chart-pie"></i> <span>Dashboard</span></a>
-        <a href="/settings" class="nav-link"><i class="fa-solid fa-sliders"></i> <span>Bot Control</span></a>
-        <a href="/users" class="nav-link"><i class="fa-solid fa-users-gear"></i> <span>User Management</span></a>
-        <a href="/upgrade_reports" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> <span>Upgrade Reports</span></a>
-        <a href="/training" class="nav-link"><i class="fa-solid fa-book"></i> <span>Training Data</span></a>
-        <a href="/history" class="nav-link"><i class="fa-solid fa-comments"></i> <span>Chat History</span></a>
-        <a href="/feedback" class="nav-link"><i class="fa-solid fa-comment-dots"></i> <span>Feedback</span></a>
-        <a href="/broadcast" class="nav-link"><i class="fa-solid fa-bullhorn"></i> <span>Broadcast</span></a>
-        
-        <div class="logout-box">
-            <a href="/logout" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span></a>
+        <div class="offcanvas-body">
+            <div class="sidebar-header d-none d-lg-flex">
+                <h4><i class="fa-solid fa-atom"></i> <span>Phy_Admin</span></h4>
+                <button id="sidebarToggleBtn" class="sidebar-toggle-btn" type="button" title="Toggle sidebar">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
+            <a href="/" class="nav-link"><i class="fa-solid fa-chart-pie"></i> <span>Dashboard</span></a>
+            <a href="/settings" class="nav-link"><i class="fa-solid fa-sliders"></i> <span>Bot Control</span></a>
+            <a href="/users" class="nav-link"><i class="fa-solid fa-users-gear"></i> <span>User Management</span></a>
+            <a href="/upgrade_reports" class="nav-link"><i class="fa-solid fa-file-invoice-dollar"></i> <span>Upgrade Reports</span></a>
+            <a href="/training" class="nav-link"><i class="fa-solid fa-book"></i> <span>Training Data</span></a>
+            <a href="/history" class="nav-link"><i class="fa-solid fa-comments"></i> <span>Chat History</span></a>
+            <a href="/feedback" class="nav-link"><i class="fa-solid fa-comment-dots"></i> <span>Feedback</span></a>
+            <a href="/broadcast" class="nav-link"><i class="fa-solid fa-bullhorn"></i> <span>Broadcast</span></a>
+            <div class="logout-box">
+                <a href="/logout" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span></a>
+            </div>
         </div>
     </div>
     {% endif %}
@@ -941,7 +937,7 @@ BASE_HTML = """
         <div class="content-container">
             {% if session.logged_in %}
             <div class="mobile-topbar d-lg-none">
-                <button type="button" class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">
+                <button type="button" class="mobile-menu-btn" data-bs-toggle="offcanvas" data-bs-target="#adminSidebar" aria-controls="adminSidebar" aria-label="Open menu">
                     <i class="fa-solid fa-bars"></i>
                 </button>
                 <p class="mobile-topbar-title mb-0"><i class="fa-solid fa-atom text-primary me-2"></i>Phy Admin</p>
@@ -985,21 +981,18 @@ BASE_HTML = """
                 return window.matchMedia('(max-width: 991.98px)').matches;
             }
             function closeMobileSidebar() {
-                document.body.classList.remove('sidebar-open');
+                var el = document.getElementById('adminSidebar');
+                if (!el || !window.bootstrap) return;
+                var instance = bootstrap.Offcanvas.getInstance(el);
+                if (instance) instance.hide();
             }
-            function openMobileSidebar() {
-                document.body.classList.add('sidebar-open');
-            }
-            $('#sidebarToggleBtn, #mobileMenuBtn').on('click', function() {
-                if (isMobileLayout()) {
-                    document.body.classList.toggle('sidebar-open');
-                } else {
+            $('#sidebarToggleBtn').on('click', function() {
+                if (!isMobileLayout()) {
                     document.body.classList.toggle('sidebar-collapsed');
                     const collapsed = document.body.classList.contains('sidebar-collapsed');
                     localStorage.setItem('phy_admin_sidebar', collapsed ? 'collapsed' : 'expanded');
                 }
             });
-            $('#sidebarBackdrop').on('click', closeMobileSidebar);
             $('.sidebar .nav-link, .sidebar .logout-btn').on('click', function() {
                 if (isMobileLayout()) closeMobileSidebar();
             });
