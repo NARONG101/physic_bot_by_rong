@@ -437,7 +437,20 @@ BASE_HTML = """
         }
         
         {% if session.logged_in %}
-        .sidebar { height: 100vh; background: linear-gradient(180deg, #0f172a, #0b1733 55%, #0a1330); color: white; padding-top: 22px; position: fixed; width: var(--sidebar-w); box-shadow: 4px 0 18px rgba(2,6,23,0.25); z-index: 1000; display: flex; flex-direction: column; }
+        .sidebar {
+            height: 100vh;
+            background: linear-gradient(180deg, #0f172a, #0b1733 55%, #0a1330);
+            color: white;
+            padding-top: 22px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: var(--sidebar-w);
+            box-shadow: 4px 0 18px rgba(2,6,23,0.25);
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+        }
         .sidebar-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 16px 16px; margin-bottom: 12px; }
         .sidebar h4 { text-align: left; margin: 0; font-weight: 800; color: #38bdf8; letter-spacing: 1px; font-size: 1.25rem;}
         .sidebar a { color: #94a3b8; text-decoration: none; padding: 18px 25px; display: block; transition: 0.25s ease; border-left: 4px solid transparent; font-weight: 500; font-size: 1.05rem; position: relative; overflow: hidden; }
@@ -455,17 +468,19 @@ BASE_HTML = """
         .sidebar a.active { background-color: #1e293b; border-left: 4px solid var(--primary); color: white; }
         .sidebar a i { margin-right: 15px; width: 22px; text-align: center; font-size: 1.1rem; }
         .logout-box { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-bottom: 20px; }
-        .main-content { margin-left: var(--sidebar-w); min-height: 100vh; }
-        body.sidebar-collapsed .sidebar { width: 84px; }
-        body.sidebar-collapsed .main-content { margin-left: 84px; }
-        body.sidebar-collapsed .sidebar h4 span,
-        body.sidebar-collapsed .sidebar a span { display: none; }
-        body.sidebar-collapsed .sidebar a { text-align: center; padding-left: 0; padding-right: 0; }
-        body.sidebar-collapsed .sidebar a i { margin-right: 0; }
-        body.sidebar-collapsed .sidebar-header { justify-content: center; }
-        body.sidebar-collapsed .sidebar-header h4 { display: none; }
-        body.sidebar-collapsed .sidebar .nav-link,
-        body.sidebar-collapsed .sidebar .logout-box { display: none !important; }
+        .main-content { margin-left: var(--sidebar-w); min-height: 100vh; width: calc(100% - var(--sidebar-w)); }
+        @media (min-width: 992px) {
+            body.sidebar-collapsed .sidebar { width: 84px; }
+            body.sidebar-collapsed .main-content { margin-left: 84px; width: calc(100% - 84px); }
+            body.sidebar-collapsed .sidebar h4 span,
+            body.sidebar-collapsed .sidebar a span { display: none; }
+            body.sidebar-collapsed .sidebar a { text-align: center; padding-left: 0; padding-right: 0; }
+            body.sidebar-collapsed .sidebar a i { margin-right: 0; }
+            body.sidebar-collapsed .sidebar-header { justify-content: center; }
+            body.sidebar-collapsed .sidebar-header h4 { display: none; }
+            body.sidebar-collapsed .sidebar .nav-link,
+            body.sidebar-collapsed .sidebar .logout-box { display: none !important; }
+        }
         {% else %}
         .main-content { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
         {% endif %}
@@ -750,60 +765,111 @@ BASE_HTML = """
         body.login-page .main-content { align-items: flex-start; padding-top: 12px; }
 
         @media (max-width: 991.98px) {
-            body { font-size: 15px; }
-            .sidebar {
-                width: min(280px, 86vw);
-                transform: translateX(-105%);
-                transition: transform 0.25s ease;
-                box-shadow: 8px 0 24px rgba(2, 6, 23, 0.35);
+            html, body {
+                max-width: 100%;
+                overflow-x: hidden;
             }
-            body.sidebar-open { overflow: hidden; }
-            body.sidebar-open .sidebar { transform: translateX(0); }
+            body { font-size: 15px; }
+            body.sidebar-collapsed .sidebar,
+            .sidebar {
+                width: min(292px, 88vw) !important;
+                left: 0 !important;
+                top: 0 !important;
+                margin-left: 0 !important;
+                transform: translate3d(-110%, 0, 0) !important;
+                transition: transform 0.28s ease !important;
+                box-shadow: 8px 0 24px rgba(2, 6, 23, 0.35);
+                visibility: visible;
+            }
+            body.sidebar-open {
+                overflow: hidden;
+                position: fixed;
+                width: 100%;
+            }
+            body.sidebar-open .sidebar {
+                transform: translate3d(0, 0, 0) !important;
+            }
             body.sidebar-open .sidebar-backdrop { display: block; }
             .main-content,
-            body.sidebar-collapsed .main-content { margin-left: 0 !important; }
-            body.sidebar-collapsed .sidebar { width: min(280px, 86vw); transform: translateX(-105%); }
+            body.sidebar-collapsed .main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+                max-width: 100vw !important;
+            }
             body.sidebar-collapsed .sidebar h4 span,
             body.sidebar-collapsed .sidebar a span,
             body.sidebar-collapsed .sidebar .nav-link,
-            body.sidebar-collapsed .sidebar .logout-box { display: block !important; }
-            body.sidebar-collapsed .sidebar a { text-align: left; padding: 14px 20px; }
-            body.sidebar-collapsed .sidebar a i { margin-right: 12px; }
-            .mobile-topbar { display: flex; align-items: center; gap: 12px; }
-            .content-container { padding: 20px 14px 28px; }
-            .mobile-topbar { margin: -20px -14px 18px; }
-            h2.fw-bold { font-size: 1.45rem; }
-            .content-container .fs-5 { font-size: 0.95rem !important; }
-            .stat-card h1 { font-size: 1.85rem; }
-            .stat-card h5 { font-size: 0.78rem; }
-            .stat-card i.bg-icon { font-size: 3.5rem; }
-            .stat-card { padding: 1rem; }
+            body.sidebar-collapsed .sidebar .logout-box {
+                display: block !important;
+            }
+            body.sidebar-collapsed .sidebar a {
+                text-align: left !important;
+                padding: 14px 20px !important;
+            }
+            body.sidebar-collapsed .sidebar a i { margin-right: 12px !important; }
+            body.sidebar-collapsed .sidebar-header h4 { display: block !important; }
+            #sidebarToggleBtn { display: none !important; }
+            .mobile-topbar {
+                display: flex !important;
+                align-items: center;
+                gap: 12px;
+            }
+            .content-container {
+                padding: 16px 12px 24px;
+                max-width: 100%;
+            }
+            .mobile-topbar { margin: -16px -12px 14px; }
+            h2.fw-bold { font-size: 1.35rem; line-height: 1.25; }
+            .content-container .fs-5 { font-size: 0.92rem !important; }
+            .stat-card h1 { font-size: 1.75rem; }
+            .stat-card h5 { font-size: 0.75rem; }
+            .stat-card i.bg-icon { font-size: 3.2rem; right: 0; bottom: -12px; }
+            .stat-card { padding: 0.95rem 1rem; min-height: 88px; }
             .card { padding: 1rem !important; }
             .card.p-4 { padding: 1rem !important; }
             .table thead th,
             .table tbody td { padding: 10px 8px; font-size: 0.88rem; }
             .btn { font-size: 0.9rem; padding: 0.5rem 0.85rem; }
             .alert.fs-5 { font-size: 0.95rem !important; }
+            .page-header-row,
             .content-container > .d-flex.justify-content-between.align-items-center,
             .content-container > .d-flex.justify-content-between.align-items-start {
-                flex-direction: column;
-                align-items: flex-start !important;
-                gap: 0.85rem;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 0.75rem !important;
             }
+            .page-header-row .d-flex.gap-3 {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+            .page-header-row .d-flex.gap-3 .btn,
+            .page-header-row .d-flex.gap-3 form {
+                width: 100%;
+            }
+            .page-header-row > *:last-child,
             .content-container > .d-flex.justify-content-between .d-flex.gap-3,
             .content-container > .d-flex.justify-content-between .btn,
-            .content-container > .d-flex.justify-content-between form {
-                width: 100%;
+            .content-container > .d-flex.justify-content-between form,
+            .content-container > .d-flex.justify-content-between > .bg-white {
+                width: 100% !important;
+                max-width: 100% !important;
             }
             .content-container > .d-flex.justify-content-between .d-flex.gap-3 {
                 flex-wrap: wrap;
             }
-            .content-container > .d-flex.justify-content-between .btn {
-                width: 100%;
+            .stat-cards-row {
+                --bs-gutter-x: 0.75rem;
             }
             .stat-cards-row > [class*="col-"] {
-                flex: 0 0 50%;
-                max-width: 50%;
+                flex: 0 0 100% !important;
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+            .stat-link, .stat-link .stat-card { width: 100%; }
+            .row.g-4 > [class*="col-md-8"],
+            .row.g-4 > [class*="col-md-4"] {
+                flex: 0 0 100%;
+                max-width: 100%;
             }
             .dataTables_wrapper .dataTables_length,
             .dataTables_wrapper .dataTables_filter {
@@ -826,11 +892,7 @@ BASE_HTML = """
 
         @media (max-width: 575.98px) {
             body { font-size: 14px; }
-            h2.fw-bold { font-size: 1.25rem; }
-            .stat-cards-row > [class*="col-"] {
-                flex: 0 0 100%;
-                max-width: 100%;
-            }
+            h2.fw-bold { font-size: 1.2rem; }
             .form-control-lg,
             .input-group-lg > .form-control { font-size: 1rem; padding: 0.65rem 0.85rem; }
         }
@@ -840,8 +902,14 @@ BASE_HTML = """
     <script>
         (function() {
             try {
-                var sidebarState = localStorage.getItem('phy_admin_sidebar') || 'expanded';
-                if (sidebarState === 'collapsed') document.body.classList.add('sidebar-collapsed');
+                var isMobile = window.matchMedia('(max-width: 991.98px)').matches;
+                if (isMobile) {
+                    document.body.classList.remove('sidebar-collapsed');
+                    document.body.classList.add('admin-mobile');
+                } else {
+                    var sidebarState = localStorage.getItem('phy_admin_sidebar') || 'expanded';
+                    if (sidebarState === 'collapsed') document.body.classList.add('sidebar-collapsed');
+                }
             } catch (e) {}
         })();
     </script>
@@ -936,7 +1004,14 @@ BASE_HTML = """
                 if (isMobileLayout()) closeMobileSidebar();
             });
             $(window).on('resize', function() {
-                if (!isMobileLayout()) closeMobileSidebar();
+                if (isMobileLayout()) {
+                    document.body.classList.add('admin-mobile');
+                    document.body.classList.remove('sidebar-collapsed');
+                    closeMobileSidebar();
+                } else {
+                    document.body.classList.remove('admin-mobile');
+                    closeMobileSidebar();
+                }
             });
         });
 
@@ -1156,12 +1231,12 @@ def dashboard():
         '''
 
     content = f"""
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 page-header-row">
         <div>
             <h2 class="fw-bold m-0 text-dark">System Overview</h2>
             <p class="text-muted m-0 fs-5 mt-1">Real-time Analytics & Live Feed</p>
         </div>
-        <div class="bg-white px-4 py-2 rounded-pill shadow-sm border fs-5">{status_html}</div>
+        <div class="bg-white px-4 py-2 rounded-pill shadow-sm border fs-5 align-self-start">{status_html}</div>
     </div>
     
     <div class="row mb-4 g-4 stat-cards-row">
@@ -1687,7 +1762,7 @@ def users_list():
         """
 
     content = f"""
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 page-header-row">
         <div>
             <h2 class="fw-bold m-0 text-dark">👥 User Management</h2>
             <p class="text-muted m-0 fs-5 mt-2">Monitor activity, manage premium subscriptions, and ban scammers.</p>
@@ -1838,7 +1913,7 @@ def upgrade_reports():
         rows = "<tr><td colspan='6' class='text-center text-muted py-4'>No upgrade records found.</td></tr>"
 
     content = f"""
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 page-header-row">
         <div>
             <h2 class="fw-bold m-0 text-dark"><i class="fa-solid fa-file-invoice-dollar text-warning me-2"></i>Upgrade Revenue Reports</h2>
             <p class="text-muted m-0 fs-5 mt-2">Query upgrade records and track total earnings from Premium sales.</p>
@@ -1951,7 +2026,7 @@ def training():
             except: pass
 
     content = f"""
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 page-header-row">
         <div>
             <h2 class="fw-bold m-0 text-dark"><i class="fa-solid fa-brain text-primary me-2"></i>AI Knowledge Base</h2>
             <p class="text-muted m-0 fs-5 mt-2">Manage the AI's core instructions, physics formulas, and Q&A examples.</p>
@@ -2133,7 +2208,7 @@ def history():
         """
 
     content = f"""
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 page-header-row">
         <div>
             <h2 class="fw-bold m-0 text-dark"><i class="fa-solid fa-comments text-primary me-2"></i>Chat History</h2>
             <p class="text-muted m-0 fs-5 mt-2">Monitor all user interactions, view uploaded images, and correct AI answers. Logs older than the retention window (default 180 days, env <code>CHAT_HISTORY_RETENTION_DAYS</code>) are removed automatically for privacy; export CSV periodically if you need training backups.</p>
